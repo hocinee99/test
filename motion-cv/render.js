@@ -4,7 +4,7 @@
 const http = require('http'), fs = require('fs'), path = require('path'), { spawn } = require('child_process');
 const { chromium } = require('playwright');
 
-const ROOT = __dirname, OUT = path.join(ROOT, 'out'), FPS = 60, DUR = 15;
+const ROOT = __dirname, OUT = path.join(ROOT, 'out'), FPS = 60, DUR = 20, WORKERS = 4;
 fs.mkdirSync(OUT, { recursive: true });
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.otf': 'font/otf', '.ttf': 'font/ttf' };
 
@@ -18,12 +18,19 @@ const server = http.createServer((req, res) => {
 (async () => {
   await new Promise(r => server.listen(0, r));
   const port = server.address().port;
-  const browser = await chromium.launch({ executablePath: process.env.CHROME || undefined, args: ['--disable-gpu-vsync'] });
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
-  page.on('console', m => console.log('[page]', m.text()));
-  page.on('pageerror', e => { console.error('[pageerror]', e); process.exit(1); });
-  await page.goto(`http://127.0.0.1:${port}/index.html`);
-  await page.evaluate(() => window.ready);
+  // one browser per worker: pages of a single browser share one (software) GPU process
+  const browsers = [], pages = [];
+  for (let i = 0; i < WORKERS; i++) {
+    const browser = await chromium.launch({ executablePath: process.env.CHROME || undefined, args: ['--disable-gpu-vsync'] });
+    browsers.push(browser);
+    const p = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+    p.on('pageerror', e => { console.error('[pageerror]', e); process.exit(1); });
+    await p.goto(`http://127.0.0.1:${port}/index.html`);
+    await p.evaluate(() => window.ready);
+    pages.push(p);
+  }
+  const page = pages[0];
+  const shot = (p, t) => p.evaluate(t => window.render(t), t).then(() => p.screenshot({ type: 'png' }));
 
   const si = process.argv.indexOf('--stills');
   if (si > 0) {
@@ -38,14 +45,14 @@ const server = http.createServer((req, res) => {
       '-c:v', 'libx264', '-preset', 'slow', '-crf', '15', '-pix_fmt', 'yuv420p', '-tune', 'animation', '-movflags', '+faststart',
       path.join(ROOT, 'cv-motion.mp4')], { stdio: ['pipe', 'inherit', 'inherit'] });
     const N = FPS * DUR, t0 = Date.now();
-    for (let f = 0; f < N; f++) {
-      await page.evaluate(t => window.render(t), f / FPS);
-      const buf = await page.screenshot({ type: 'png' });
-      if (!ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
+    // frames are rendered in parallel batches (one per page) and written in order
+    for (let f = 0; f < N; f += WORKERS) {
+      const bufs = await Promise.all(pages.map((p, k) => f + k < N ? shot(p, (f + k) / FPS) : null));
+      for (const buf of bufs) if (buf && !ff.stdin.write(buf)) await new Promise(r => ff.stdin.once('drain', r));
       if (f % 60 === 0) console.log(`frame ${f}/${N}  ${((Date.now() - t0) / 1000).toFixed(1)}s`);
     }
     ff.stdin.end();
     await new Promise(r => ff.on('close', r));
   }
-  await browser.close(); server.close();
+  await Promise.all(browsers.map(b => b.close())); server.close();
 })();

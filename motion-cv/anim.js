@@ -2,7 +2,8 @@
 /* Hocine Boukhemza — CV motion design, 15 s @ 60 fps.
    Deterministic: render(t) draws the frame at time t (seconds). */
 
-const W = 1920, H = 1080, FPS = 60, DUR = 15, TAU = Math.PI * 2;
+// The timeline below is authored on a 15 s grid and played back K× slower.
+const W = 1920, H = 1080, FPS = 60, DUR = 20, K = DUR / 15, TAU = Math.PI * 2;
 
 const main = document.getElementById('c');
 main.width = W; main.height = H;
@@ -198,9 +199,9 @@ function S1(c, t) {
     line(c, cx - 690, 522, lerp(cx - 690, 140, ph), 522, 'rgba(255,255,255,.35)', 1);
     line(c, cx + 690, 522, lerp(cx + 690, W - 140, ph), 522, 'rgba(255,255,255,.35)', 1);
     decode(c, '[ CV ]', 140, 510, 15, COL.lime, t, .95, { ls: 2 });
-    decode(c, 'ALTERNANCE 26/27', W - 140, 510, 15, COL.lime, t, 1.0, { ls: 2, align: 'right' });
+    decode(c, 'STAGE · 3 MOIS', W - 140, 510, 15, COL.lime, t, 1.0, { ls: 2, align: 'right' });
   }
-  decode(c, 'ÉLÈVE INGÉNIEUR · CENTRALE MÉDITERRANÉE × DAUPHINE-PSL', cx, 800, 25, COL.ink, t, 1.0, { ls: 5, align: 'center', speed: .011 });
+  decode(c, 'M1 IDD · DAUPHINE-PSL  ×  ÉLÈVE INGÉNIEUR · CENTRALE MÉDITERRANÉE', cx, 800, 24, COL.ink, t, 1.0, { ls: 4, align: 'center', speed: .0095 });
   decode(c, 'DATA SCIENCE — MACHINE LEARNING — OPTIMISATION', cx, 848, 18, COL.cyan, t, 1.25, { ls: 6, align: 'center', speed: .01 });
   c.restore();
 }
@@ -213,7 +214,7 @@ const EDU = [
   { y: '23—24', tag: 'CPGE · MPSI', ti: 'Lycée Paul Valéry', sub: 'Maths avancées · Physique · SI' },
   { y: '24—25', tag: 'LICENCE 2 · INFORMATIQUE', ti: 'Sorbonne Université', sub: 'Algorithmique · Structures de données · C · Java' },
   { y: '25—26', tag: 'LICENCE · INFO & MATHS', ti: 'Dauphine-PSL', sub: 'Machine Learning · Stats · Optimisation · IA' },
-  { y: '26—27', tag: 'CYCLE INGÉNIEUR + MASTER 1', ti: 'Centrale Méditerranée', sub: '× Dauphine-PSL — Informatique, Décision, Données' },
+  { y: '26—27', tag: 'MASTER 1 IDD + CYCLE INGÉNIEUR', ti: 'M1 IDD · Dauphine-PSL', sub: 'Informatique, Décision, Données + Centrale Méditerranée' },
 ];
 const NX = i => 300 + i * 560, LY = 600, T0 = .4, ST = .45, MV = .28;
 function headX(u) {
@@ -606,15 +607,16 @@ function S5(c, t) {
   const na = E.outExpo(P(u, .3, 1.3)), ls = lerp(46, 3, na);
   const nf = FD(800, 76), nw = measure(c, 'HOCINE BOUKHEMZA', nf, ls);
   txt(c, 'HOCINE BOUKHEMZA', cx - nw / 2 + ls / 2, 680, nf, COL.ink, { ls, alpha: P(u, .3, .75) });
-  decode(c, 'RECHERCHE ALTERNANCE — DATA SCIENCE & IA · 2026/2027', cx, 736, 22, COL.cyan, u, .6, { ls: 4, align: 'center', speed: .01 });
-  const dl = E.outExpo(P(u, .8, 1.5));
-  line(c, cx - 460 * dl, 790, cx + 460 * dl, 790, 'rgba(255,255,255,.25)', 1);
+  decode(c, 'M1 IDD · DAUPHINE-PSL  ×  CENTRALE MÉDITERRANÉE', cx, 732, 19, DIM, u, .55, { ls: 4, align: 'center', speed: .009 });
+  decode(c, 'RECHERCHE UN STAGE DE 3 MOIS — DATA SCIENCE & IA', cx, 782, 24, COL.cyan, u, .7, { ls: 4, align: 'center', speed: .01 });
+  const dl = E.outExpo(P(u, .9, 1.5));
+  line(c, cx - 460 * dl, 818, cx + 460 * dl, 818, 'rgba(255,255,255,.25)', 1);
   // contacts
   const fnt = FT(500, 24);
   const ws = CONTACT.map(([, s]) => measure(c, s, fnt) + 56), gap = 60, tot = ws.reduce((a, b) => a + b, 0) + gap * 2;
   let x = cx - tot / 2;
   CONTACT.forEach(([ic, s], i) => {
-    const a = E.outExpo(P(u, .95 + i * .1, 1.6 + i * .1)), y = 858 + (1 - a) * 30;
+    const a = E.outExpo(P(u, .95 + i * .1, 1.6 + i * .1)), y = 882 + (1 - a) * 30;
     c.save(); c.globalAlpha = a;
     rrect(c, x, y - 30, 40, 40, 10); c.strokeStyle = i === 0 ? COL.lime : COL.cyan; c.lineWidth = 1.5; c.stroke();
     txt(c, ic, x + 20, y - 2, FM(700, 20), i === 0 ? COL.lime : COL.cyan, { align: 'center' });
@@ -713,8 +715,8 @@ function glitch(c, t, amt) {
   }
 }
 
-function hud(c, t) {
-  const a = E.outCubic(P(t, .6, 1.3)); if (a <= 0) return;
+function hud(c, T) { // T = real playback time
+  const t = T / K, a = E.outCubic(P(t, .6, 1.3)); if (a <= 0) return;
   c.save(); c.globalAlpha = a;
   const m = 40, L = 26, col = 'rgba(255,255,255,.55)';
   [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]].forEach(([x, y, sx, sy]) => {
@@ -723,19 +725,20 @@ function hud(c, t) {
   const sec = t < 2 ? '00 / INTRO' : t < 5 ? '01 / FORMATION' : t < 9 ? '02 / COMPÉTENCES' : t < 12.5 ? '03 / PROJETS' : '04 / CONTACT';
   txt(c, 'HB — CV.MOTION', m + 40, m + 18, FM(500, 13), col, { ls: 3 });
   txt(c, sec, W - m - 40, m + 18, FM(700, 13), COL.lime, { ls: 3, align: 'right' });
-  const f = Math.min(DUR * FPS - 1, Math.round(t * FPS)), ss = Math.floor(f / FPS), ff = f % FPS;
+  const f = Math.min(DUR * FPS - 1, Math.round(T * FPS)), ss = Math.floor(f / FPS), ff = f % FPS;
   txt(c, `TC 00:00:${String(ss).padStart(2, '0')}:${String(ff).padStart(2, '0')}`, m + 40, H - m - 4, FM(500, 13), col, { ls: 3 });
-  if (Math.floor(t * 2) % 2 === 0) { c.fillStyle = COL.pink; c.beginPath(); c.arc(W - m - 56 - measure(c, 'REC · 60FPS', FM(500, 13), 3), H - m - 9, 5, 0, TAU); c.fill(); }
+  if (Math.floor(T * 2) % 2 === 0) { c.fillStyle = COL.pink; c.beginPath(); c.arc(W - m - 56 - measure(c, 'REC · 60FPS', FM(500, 13), 3), H - m - 9, 5, 0, TAU); c.fill(); }
   txt(c, 'REC · 60FPS', W - m - 40, H - m - 4, FM(500, 13), col, { ls: 3, align: 'right' });
   // progress
   const x0 = 360, x1 = W - 360, y = H - m - 8;
   line(c, x0, y, x1, y, 'rgba(255,255,255,.12)', 2);
-  line(c, x0, y, lerp(x0, x1, t / DUR), y, COL.cyan, 2);
-  [2, 5, 9, 12.5].forEach(s => { const xx = lerp(x0, x1, s / DUR); line(c, xx, y - 5, xx, y + 5, t >= s ? COL.cyan : 'rgba(255,255,255,.3)', 2); });
+  line(c, x0, y, lerp(x0, x1, T / DUR), y, COL.cyan, 2);
+  [2, 5, 9, 12.5].forEach(s => { const xx = lerp(x0, x1, s * K / DUR); line(c, xx, y - 5, xx, y + 5, t >= s ? COL.cyan : 'rgba(255,255,255,.3)', 2); });
   c.restore();
 }
 
-function render(t) {
+function render(T) {
+  const t = T / K, fr = Math.floor(T * FPS);
   compose(xa, t);
   xa.globalAlpha = 1; xa.globalCompositeOperation = 'source-over';
   // impact envelopes
@@ -746,7 +749,7 @@ function render(t) {
     else if (dt > -.06) ca += s * 5 * (1 + dt / .06);
   }
   if (gl > 0) glitch(xa, t, gl);
-  const r = R(Math.floor(t * 60) + 77);
+  const r = R(fr + 77);
   const sx = (r() - .5) * 26 * sh, sy = (r() - .5) * 26 * sh, rot = (r() - .5) * .006 * sh;
   X.save();
   X.fillStyle = '#000'; X.fillRect(0, 0, W, H);
@@ -757,10 +760,10 @@ function render(t) {
   const fl = Math.max((1 - P(t, .5, .8)) ** 3 * (t >= .5 ? .85 : 0), (1 - P(t, 12.5, 12.85)) ** 3 * (t >= 12.5 ? .8 : 0), (1 - P(t, 14, 14.25)) ** 3 * (t >= 14 ? .25 : 0));
   if (fl > 0) { X.fillStyle = `rgba(255,255,255,${fl})`; X.fillRect(0, 0, W, H); }
   X.drawImage(VIG, 0, 0);
-  hud(X, t);
+  hud(X, T);
   // film grain
   X.save(); X.globalCompositeOperation = 'overlay'; X.globalAlpha = .07;
-  const gi = Math.floor(t * 60) % 4, ox = -Math.floor(r() * 512), oy = -Math.floor(r() * 512);
+  const gi = fr % 4, ox = -Math.floor(r() * 512), oy = -Math.floor(r() * 512);
   for (let y = oy; y < H; y += 512) for (let x = ox; x < W; x += 512) X.drawImage(GRAIN[gi], x, y);
   X.restore();
   // fade in from black / fade out

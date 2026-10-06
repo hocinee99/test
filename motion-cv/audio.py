@@ -1,9 +1,11 @@
-"""Synthesised 15 s soundtrack, 120 BPM, locked to the cuts in anim.js.
-Writes out/audio.wav (48 kHz, 16-bit stereo). numpy only."""
+"""Synthesised soundtrack locked to the cuts in anim.js.
+Event times are written on the same 15 s / 120 BPM grid as the animation and
+played back K× slower (20 s, 90 BPM). Writes out/audio.wav (48 kHz, 16-bit stereo). numpy only."""
 import os, wave
 import numpy as np
 
-SR, D = 48000, 15.0
+SR, K = 48000, 4 / 3
+D = 15.0 * K
 N = int(SR * D)
 mix = np.zeros((N, 2))
 rv_send = np.zeros((N, 2))
@@ -16,7 +18,7 @@ def tt(dur):
 
 
 def place(buf, sig, t0, gain=1.0, pan=0.0, send=0.0):
-    i = int(round(t0 * SR))
+    i = int(round(t0 * K * SR))
     if i >= N:
         return
     if sig.ndim == 1:
@@ -166,15 +168,15 @@ kick_times = sorted(set(round(k, 3) for k in kick_times))
 T = np.arange(N) / SR
 duck = np.ones(N)
 for k in kick_times:
-    i = int(k * SR)
+    i = int(k * K * SR)
     d = np.arange(N - i) / SR
     duck[i:] = np.minimum(duck[i:], 1 - 0.72 * np.exp(-d / 0.11))
 
 # pad
 pad = np.zeros((N, 2))
 for idx, (s, notes) in enumerate(CHORDS):
-    e = CHORDS[idx + 1][0] if idx + 1 < len(CHORDS) else D
-    s0 = max(s, 0.45); dur = e - s0 + 0.25
+    e = CHORDS[idx + 1][0] if idx + 1 < len(CHORDS) else 15.0
+    s0 = max(s, 0.45); dur = (e - s0 + 0.25) * K
     if dur <= 0: continue
     n = int(dur * SR)
     env = adsr(n, 0.25 if idx == 0 else 0.04, 0.3, 0.8, 0.25)
@@ -196,7 +198,7 @@ for i in range(24):
         if tb >= 14.0: continue
         if tb >= 12.5 and off: continue
         m = bass_at(tb) + (12 if (i % 4 == 3 and off) else 0)
-        dur = 0.22
+        dur = 0.22 * K
         n = int(dur * SR); tb_ = tt(dur)
         v = (saw(NOTE(m), dur) * .6 + np.sin(2 * np.pi * NOTE(m) * tb_)) * adsr(n, .003, .08, .6, .05)
         v = sweep_lp(v, 2200, 260, 0.6)
@@ -216,7 +218,7 @@ for i in range(int((12.5 - 5.0) / 0.125)):
     v = fft_filter(v, None, 3800, 1)
     vel = 0.5 + 0.5 * (i % 4 == 0)
     place(arp, v * 0.11 * vel, ta, 1.0, (-.35, .35)[i % 2])
-dly = np.zeros_like(arp); dl = int(0.375 * SR)
+dly = np.zeros_like(arp); dl = int(0.375 * K * SR)
 for k, g in enumerate([0.45, 0.25, 0.12]):
     sh = dl * (k + 1)
     src = arp[:-sh] if sh < N else arp[:0]
@@ -245,17 +247,17 @@ for i in range(12):
     add(hat(), 0.5 + 0.125 * i + 0.75, 0.09 + 0.012 * i, 0.4 * (-1) ** i)
 
 # impacts & transitions
-add(riser(0.5, 200, 12000), 0.0, 0.45, send=0.2)
+add(riser(0.5 * K, 200, 12000), 0.0, 0.45, send=0.2)
 for h in HITS:
     big = h in (0.5, 12.5, 14.0)
     add(boom(1.8 if big else 1.0), h, 0.9 if big else 0.55)
     add(crash(2.6 if big else 1.6), h, 0.7 if big else 0.4, send=0.4)
 for w0 in (1.7, 4.7, 8.72):
-    add(whoosh(0.32), w0, 0.55, send=0.3)
-add(riser(0.22, 800, 14000), 12.28, 0.55)
-add(whoosh(0.24), 12.27, 0.5)
+    add(whoosh(0.32 * K), w0, 0.55, send=0.3)
+add(riser(0.22 * K, 800, 14000), 12.28, 0.55)
+add(whoosh(0.24 * K), 12.27, 0.5)
 # reverse swell into the final hit
-sw = riser(0.6, 300, 6000); add(sw, 13.4, 0.35, send=0.4)
+sw = riser(0.6 * K, 300, 6000); add(sw, 13.4, 0.35, send=0.4)
 
 # UI blips (scale tones), synced to on-screen events
 PENTA = [69, 72, 74, 76, 79, 81, 84]
@@ -277,7 +279,7 @@ for i in range(16):
 
 # final chord bloom after the last hit
 for m in [45, 57, 64, 67, 71, 76]:
-    dur = 1.1
+    dur = 1.1 * K
     v = np.sin(2 * np.pi * NOTE(m) * tt(dur)) * adsr(int(dur * SR), 0.01, 0.4, 0.5, 0.6) * 0.09
     add(v, 14.0, 1.0, rng.uniform(-.5, .5), send=0.9)
 

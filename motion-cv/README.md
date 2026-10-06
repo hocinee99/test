@@ -1,13 +1,15 @@
 # CV motion design — Hocine Boukhemza
 
-Vidéo de 15 s (1920×1080, 60 fps, son stéréo) : `cv-motion.mp4`.
+Vidéo de 20 s (1920×1080, 60 fps, son stéréo) : `cv-motion.mp4`.
 
 Tout est généré par code, sans assets externes (hors polices) :
 
 - `anim.js` : moteur d'animation canvas 2D déterministe (`render(t)`), 5 scènes + transitions
   (wipe en biseau, iris double, découpe en bandes, zoom-through), aberration chromatique,
   glitch, shake caméra, grain et HUD.
-- `audio.py` : bande-son 120 BPM synthétisée avec numpy, calée sur les coupes.
+- `audio.py` : bande-son 90 BPM synthétisée avec numpy, calée sur les coupes.
+- La timeline est écrite sur une grille de 15 s puis jouée `K = DUR / 15` fois plus lentement
+  (constante `DUR` dans `anim.js` / `render.js`, `K` dans `audio.py`) pour régler le rythme.
 - `render.js` : rendu image par image via Chromium headless, encodage ffmpeg (H.264 + AAC).
 
 ```bash
